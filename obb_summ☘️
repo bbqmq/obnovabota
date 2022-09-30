@@ -1,0 +1,4 @@
+obb_summ = int(bank+balance)
+print(f'{{:,}.format(obb_summ).replace(',', '.'})
+
+❗️ ОБЩАЯ СУММА ВЫВОДЯ КОМАНДОЙ {obb_summ} ❗️

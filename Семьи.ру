@@ -1,0 +1,1087 @@
+
+
+            # КОНСТРУКЦИЯ БАЗЫ ДАННЫХ
+
+ cursor.execute("""CREATE TABLE IF NOT EXISTS user_family(
+      user_name STRING,
+      user_id INT,
+      family STRING,
+      rank INT
+ )
+""")
+
+ cursor.execute("""CREATE TABLE IF NOT EXISTS family_id(
+      id INT
+ )
+ """)
+
+ cursor.execute("""CREATE TABLE IF NOT EXISTS family(
+      name STRING,
+      owner_id INT,
+      owner_name STRING,
+      id INT,
+      balance INT,
+      opis STRING,
+      time_name INT
+ )
+ """)
+
+
+
+
+
+        # КОМАНДЫ
+
+     if message.text.lower() == 'пригласить в семью':
+       if not message.reply_to_message:
+          await message.reply("❗️ Эта команда должна быть <b>ответом на сообщение</b>", parse_mode='html')
+          return
+
+       user_id = message.from_user.id
+       reply_user_id = message.reply_to_message.from_user.id
+
+       if reply_user_id == user_id:
+          return await message.reply(f'❗️ Вы не можете пригласить <b>самого себя</b> в семью.', parse_mode='html')
+       else:
+          pass
+        user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       reply_user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.reply_to_message.from_user.id,)).fetchone()
+       reply_user_name = str(reply_user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+         
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+      
+       if rank_family < 2:
+          return await message.reply(f'❗️ Приглашать игроков в семью можно от <b>2 ранга</b>', parse_Mode='html')
+       else:
+          pass
+
+       user1 = message.reply_to_message.from_user.id
+       user2 = reply_user_name
+       keyboard = types.InlineKeyboardMarkup()
+       keyboard.add(types.InlineKeyboardButton(text="✅ Принять приглашение", callback_data=f"accept_{user1}:{user2}:{name_family}"))
+
+       text = f'''
+ 👶 <a href='tg://user?id={reply_user_id}'>{reply_user_name}</a>, вас приглашают в семью «<b>{name_family}</b>»
+       '''
+
+       await message.answer(text, reply_markup=keyboard, parse_mode='html')
+
+     if message.text.startswith('cоздать семью') or message.text.startswith('Создать семью'):
+        user_id = message.from_user.id
+        user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+        user_name = str(user_name[0])
+
+        all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+        all_family2 = []
+       
+        for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+      
+        if user_id in all_family2:
+          return await message.reply(f'❗️У вас есть <b>своя семья.</b> Зачем вам ещё одна? | <code>Распустить семью</code> - удаление семьи ', parse_mode='html')
+        else:
+          pass
+
+        user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+        if user_id_family != None:
+          return await message.reply('❗️ Вы уже <b>состоите в семье</b> | напишите «<code>выйти с семьи</code>» - для выхода с вашей семьи',parse_mode='html')
+        else:
+          pass
+
+        donate_coins = cursor.execute("SELECT donate_coins from users where user_id = ?",(message.from_user.id,)).fetchone()
+        donate_coins = int(donate_coins[0])
+
+        if donate_coins < config.cash_family:
+          return await message.reply(f'❗️ <b>Недостаточно Donate-Coins</b> | Стоимость: <b>{config.cash_family} Donate-Coins</b> 🪙')
+        else:
+          pass
+       
+        name_family = message.text.split()[2:]
+        name_family2 = ' '.join(name_family)
+        full_name_family = (name_family2).replace(' ','').replace('🇷🇺', '').replace('Россия', 'россия').replace('россия', '')
+
+        if len(full_name_family) < 4:
+          return await message.reply('❗️ Название семьи должна быть больше <b>4 символов</b>', parse_Mode='html')
+        elif len(full_name_family) > 35:
+          return await message.reply(f'❗️ Название семьи должна быть меньше <b>35 символов</b>', parse_mode='html')
+        else:
+          pass
+
+        all_family_name = cursor.execute('SELECT name from family').fetchall()
+        all_family_name2 = []
+
+        for all_family_name3 in all_family_name:
+          all_family_name2.append(all_family_name3[0])
+      
+        if full_name_family in all_family_name2:
+         return await message.reply(f'❗️ Семья с названием «<b>{full_name_family}</b>» уже существует', parse_mode='html')
+        else:
+          pass
+       
+        family_id = cursor.execute('SELECT id from family_id').fetchone()
+        family_id = int(family_id[0])
+        new_family_id = family_id + 1
+
+        text = f'''
+ ✅ Вы успешно создали семью «<b>{full_name_family}</b>»
+        '''
+
+        text2 = f'''
+ ❕ Для просмотра своей семьи напишите <code>моя семья</code>
+        '''
+        time_family = time.time()
+        opis = ''
+        cursor.execute(f'UPDATE family_id SET id = {new_family_id}')
+        cursor.execute("INSERT INTO family VALUES(?, ?, ?, ?, ?, ?, ?);",(full_name_family, user_id, user_name, new_family_id, 0, opis, time_family))
+        connect.commit()
+        await message.answer(text, parse_mode='html')
+        await message.answer(text2, parse_mode='html')
+
+
+
+
+
+     if message.text.lower() in ['моя семья', "семья"]:
+       user_id = message.from_user.id
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       owner_name = cursor.execute(f'SELECT owner_name from family where name = "{name_family}"').fetchone()
+       owner_name = owner_name[0]
+
+       rank3 = cursor.execute(f'SELECT user_name from user_family where rank = {3} and family = "{name_family}"').fetchall()
+       all_rank3 = []
+
+       for user_rank3 in rank3:
+          all_rank3.append(user_rank3[0])
+
+       full_all_rank3 = ' '.join(all_rank3)
+
+       if full_all_rank3 == '':
+          full_all_rank3 = 'Отсутствуют 😕'
+       else:
+          pass
+
+       rank2 = cursor.execute(f'SELECT user_name from user_family where rank = {2} and family = "{name_family}"').fetchall()
+       all_rank2 = []
+
+       for user_rank2 in rank2:
+          all_rank2.append(user_rank2[0])
+
+       full_all_rank2 = ' '.join(all_rank2)
+
+      if full_all_rank2 == '':
+          full_all_rank2 = 'Отсутствуют 😕'
+       else:
+          pass
+      
+       id_family = cursor.execute(f'SELECT id from family where name = "{name_family}"').fetchone()
+       id_family = int(id_family[0])
+
+       sqlite_select_query2 = f"""SELECT * from user_family where family = \"{name_family}\""""
+       cursor.execute(sqlite_select_query2)
+       all_user_family = cursor.fetchall()
+
+       balance_family = cursor.execute(f'SELECT balance from family where name = "{name_family}"').fetchone()
+       balance_family = int(balance_family[0])
+
+       opis_family = cursor.execute(f'SELECT opis from family where name = "{name_family}"').fetchone()
+       opis_family = opis_family[0]
+      
+       if opis_family == '':
+          opis_family = 'Пустое'
+       else:
+          pass
+
+       text = f'''
+ Информация за семью «<b>{name_family}</b>» 👨‍👩‍👧‍👦
+ ➖➖➖➖➖➖➖➖
+ 🤵‍♂️ Основатель семьи: {owner_name}
+ 👨‍💻 Заместитель (3 ранг): {full_all_rank3} 
+ 🧑‍💼 Помощники (2 ранг): {full_all_rank2} 
+ ➖➖➖➖➖➖➖➖
+ 🔎 ID: <code>{id_family}</code>
+ 👥 Игроков в семье: <b>{len(all_user_family)}</b>
+ 💰 Мешок семьи: <code>{balance_family} с. монет</code>
+ 💭 Описания семьи: <i>{opis_family}</i>
+       '''
+       await message.reply(text, parse_mode='html')
+
+
+
+
+
+
+     if message.text.lower() == 'выйти с семьи':
+       user_id = message.from_user.id
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          status_owner_family = 'off'
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+
+          status_owner_family = 'on'
+         
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+      
+       if status_owner_family == 'on':
+          return await message.reply(f'❗️ Вы <b>владелец семьи</b>, вы не можете покинуть свою семью | Пропишите <code>Распустить семью</code> для её удаление', parse_mode='html')
+       else:
+          pass
+
+       cursor.execute(f'DELETE from user_family where family = "{name_family}"')
+
+       text = f'''
+ 😧 Вы покинули семью «<b>{name_family}</b>» 
+       '''
+
+       await message.reply(text, parse_mode='html')
+
+     if message.text.lower() == 'распустить семью':
+       user_id = message.from_user.id
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+         rank_family = int(rank_family[0])  
+
+          status_owner_family = 'off'
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+         proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+
+          status_owner_family = 'on'
+         
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       if status_owner_family == 'off':
+          return await message.reply(f'❗️ Распустить семью может только <b>её владелец</b>', parse_mode='html')
+      else:
+          pass
+
+       cursor.execute(f'DELETE from family where name = "{name_family}"')
+       cursor.execute(f'DELETE from user_family where family = "{name_family}"')
+
+       text = f'''
+ 🥲 Вы успешно распустили семью «<b>{name_family}</b>»
+       '''
+
+       await message.reply(text, parse_mode='html')
+    if message.text.startswith('+описание семьи'):
+       user_id = message.from_user.id
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          name_family5 = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family5 = name_family5[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+         
+          name_family5 = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family5 = name_family5[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+         return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+      else:
+         pass
+
+       if rank_family < 3:
+          return await message.reply(f'❗️ Менять описание семьи можно только с <b>3 ранга</b>', parse_mode='html')
+       else:
+          pass
+
+       new_opis = message.text[16:]
+      
+       if len(new_opis) > 150:
+          return await message.reply('❗️ Описание должно быть не больше <b>150 символов</b>', parse_mode='html')
+       else:
+          pass
+      
+       cursor.execute(f'UPDATE family SET opis = "{new_opis}" where name = "{name_family5}"')
+
+       text = f'''
+ ✅ Вы <b>успешно</b> поменяли описание семьи
+#       '''
+
+       await message.reply(text, parse_mode='html')
+
+
+
+
+
+     if message.text.lower() == 'выгнать из семьи':
+       if not message.reply_to_message:
+          await message.reply("❗️ Эта команда должна быть <b>ответом на сообщение</b>", parse_mode='html')
+          return
+
+       user_id = message.from_user.id
+       reply_user_id = message.reply_to_message.from_user.id
+
+       if user_id == reply_user_id:
+          return await message.reply('❗️ Вы не можете выгнать сами себя | Воспользуйтесь командой <code>Выйти с семьи</code>', parse_mode='html')
+       else:
+         pass
+
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       reply_user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.reply_to_message.from_user.id,)).fetchone()
+       reply_user_name = str(reply_user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          status_owner_family = 'off'
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+
+          status_owner_family = 'on'
+
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       if rank_family < 3:
+          return await message.reply(f'❗️ Выганять участников можно от <b>3 ранга</b>', parse_mode='html')
+       else:
+          pass
+      
+       reply_proverka_family = 0
+
+       reply_user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {reply_user_id}').fetchone()
+
+       if reply_user_id_family != None:
+          reply_rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {reply_user_id}').fetchone()
+          reply_rank_family = int(reply_rank_family[0])  
+
+          reply_name_family = cursor.execute(f'SELECT family from user_family where user_id = {reply_user_id}').fetchone()
+          reply_name_family = reply_name_family[0]     
+       else:
+          reply_proverka_family += 1
+
+       if reply_user_id in all_family2:
+          reply_rank_family = 3
+         
+          reply_name_family = cursor.execute(f'SELECT name from family where owner_id = {reply_user_id}').fetchone()
+          reply_name_family = reply_name_family[0]     
+       else:
+          reply_proverka_family += 1
+
+       if reply_proverka_family == 2:
+          return await message.reply(f'❗️ Этот игрок не состоит в клане')
+       else:
+          pass
+      
+       if reply_name_family != name_family:
+          return await message.reply(f'❗️ Этот игрок состоит не в вашем клане')
+       else:
+          pass
+
+
+       if reply_rank_family == 3:
+          if status_owner_family == 'on':
+             pass
+          else:
+             return await message.reply(f'❗️ Вы не можете выгнать человека с <b>3 рангом</b> | <i>Под силу только владельцу семьи</i>', parse_mode='html')
+       else:
+          pass
+
+       cursor.execute(f'DELETE from user_family where user_id = {reply_user_id}')
+       connect.commit()
+
+       text = f'''
+ 👀 Вы выгнали <a href='tg://user?id={reply_user_id}'>{reply_user_name}</a> с семьи «<b>{name_family}</b>»
+       '''
+
+       await message.reply(text, parse_mode='html')
+
+
+     if message.text.lower() == '+ранг семьи':
+       if not message.reply_to_message:
+          await message.reply("❗️ Эта команда должна быть <b>ответом на сообщение</b>", parse_mode='html')
+          return
+
+       user_id = message.from_user.id
+       reply_user_id = message.reply_to_message.from_user.id
+
+       if user_id == reply_user_id:
+          return await message.reply('❗️ Вы не можете повысить сам себе ранг')
+       else:
+          pass
+
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       reply_user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.reply_to_message.from_user.id,)).fetchone()
+       reply_user_name = str(reply_user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          status_owner_family = 'off'
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+
+          status_owner_family = 'on'
+
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       if rank_family < 3:
+          return await message.reply(f'❗️ Повышать ранг в семье можно от <b>3 ранга</b>', parse_mode='html')
+       else:
+          pass
+      
+       reply_proverka_family = 0
+
+       reply_user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {reply_user_id}').fetchone()
+
+       if reply_user_id_family != None:
+          reply_rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {reply_user_id}').fetchone()
+         reply_rank_family = int(reply_rank_family[0])  
+
+          reply_name_family = cursor.execute(f'SELECT family from user_family where user_id = {reply_user_id}').fetchone()
+          reply_name_family = reply_name_family[0]     
+       else:
+          reply_proverka_family += 1
+
+       if reply_user_id in all_family2:
+          reply_rank_family = 3
+         
+          reply_name_family = cursor.execute(f'SELECT name from family where owner_id = {reply_user_id}').fetchone()
+          reply_name_family = reply_name_family[0]     
+       else:
+          reply_proverka_family += 1
+
+       if reply_proverka_family == 2:
+          return await message.reply(f'❗️ Этот игрок не состоит в клане')
+       else:
+          pass
+      
+       if reply_name_family != name_family:
+          return await message.reply(f'❗️ Этот игрок состоит не в вашем клане')
+       else:
+          pass
+
+       if reply_rank_family == 3:
+          return await message.reply(f'❗️ У данного игрока максимальный ранг', parse_mode='html')
+       else:
+          pass
+      
+
+       cursor.execute(f'UPDATE user_family SET rank = {reply_rank_family + 1} WHERE user_id = {reply_user_id}')
+       connect.commit()
+
+       text = f'''
+ 🔼 Вы повысили на 1 ранг игрока <a href='tg://user?id={reply_user_id}'>{reply_user_name}</a>
+       '''
+       await message.reply(text, parse_mode='html')
+
+
+
+
+
+
+
+     if message.text.lower() == '-ранг семьи':
+      if not message.reply_to_message:
+          await message.reply("❗️ Эта команда должна быть <b>ответом на сообщение</b>", parse_mode='html')
+          return
+
+       user_id = message.from_user.id
+       reply_user_id = message.reply_to_message.from_user.id
+
+       if user_id == reply_user_id:
+          return await message.reply('❗️ Вы не можете понизить сам себе ранг')
+       else:
+          pass
+
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       reply_user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.reply_to_message.from_user.id,)).fetchone()
+       reply_user_name = str(reply_user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+      all_family2 = []
+       proverka_family = 0
+
+      for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          status_owner_family = 'off'
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+
+          status_owner_family = 'on'
+
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+         return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       if rank_family < 3:
+          return await message.reply(f'❗️ Понижать ранг в семье можно от <b>3 ранга</b>', parse_mode='html')
+       else:
+          pass
+      
+       reply_proverka_family = 0
+
+       reply_user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {reply_user_id}').fetchone()
+
+       if reply_user_id_family != None:
+          reply_rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {reply_user_id}').fetchone()
+          reply_rank_family = int(reply_rank_family[0])  
+
+          reply_name_family = cursor.execute(f'SELECT family from user_family where user_id = {reply_user_id}').fetchone()
+          reply_name_family = reply_name_family[0]     
+       else:
+          reply_proverka_family += 1
+
+       if reply_user_id in all_family2:
+          reply_rank_family = 3
+         
+          reply_name_family = cursor.execute(f'SELECT name from family where owner_id = {reply_user_id}').fetchone()
+          reply_name_family = reply_name_family[0]     
+       else:
+          reply_proverka_family += 1
+
+      if reply_proverka_family == 2:
+          return await message.reply(f'❗️ Этот игрок не состоит в клане')
+       else:
+          pass
+      
+       if reply_name_family != name_family:
+          return await message.reply(f'❗️ Этот игрок состоит не в вашем клане')
+       else:
+          pass
+
+       if reply_rank_family == 3:
+          if status_owner_family == 'on':
+             pass
+          else:
+             return await message.reply(f'❗️ Вы не можете понизить человека с <b>3 рангом</b> | <i>Под силу только владельцу семьи</i>', parse_mode='html')
+       else:
+          pass
+      
+       if reply_rank_family == 1:
+          return await message.reply(f'❗️ У данного игрока и так минимальный ранг.')
+       else:
+          pass
+
+       cursor.execute(f'UPDATE user_family SET rank = {reply_rank_family - 1} WHERE user_id = {reply_user_id}')
+       connect.commit()
+
+       text = f'''
+ 🔽 Вы понизили на 1 ранг игрока <a href='tg://user?id={reply_user_id}'>{reply_user_name}</a>
+       '''
+       await message.reply(text, parse_mode='html')
+
+
+
+
+
+
+
+
+     if message.text.startswith('Купить монеты') or message.text.startswith('купить монеты'):
+       user_id = message.from_user.id
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+      user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          name_family = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+         
+          name_family = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family = name_family[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       reput = cursor.execute("SELECT reput from reput where user_id = ?",(message.from_user.id,)).fetchone()
+       reput = int(reput[0])
+
+       su = msg.text.split()[2]
+       su2 = (su).replace(' ', '').replace('k', '000').replace('е','e').replace('к', '000').replace(',', '').replace('.', '')
+       su3 = float(su2)
+       summ = int(su3)
+
+       summ2 = '{:,}'.format(summ).replace(',', '.')
+      
+       if summ < 10:
+          return await message.reply(f'❗️ Можно покупать только от <code>10</code> <b>семейных монет</b>', parse_mode='html')
+       else:
+          pass
+
+       if summ > reput:
+          return await message.reply(f'❗️ У вас недостаточно <b>репутации</b> | <i>1 с. монета = 1 репутация</i>', parse_mode='html')
+       else:
+          pass
+
+       if summ <= 0:
+          return await message.reply(f'❗️ Сумма не должна быть отрицательным число <b>[0 и меньше]</b>', parse_mode='html')
+       else:
+          pass
+      
+       balance_family = cursor.execute(f'SELECT balance from family where name = "{name_family}"').fetchone()
+       balance_family = balance_family[0]
+
+       cursor.execute(f'UPDATE family SET balance = {balance_family + summ} WHERE name = "{name_family}"')
+       cursor.execute(f'UPDATE reput SET reput = {reput - summ} WHERE user_id = "{user_id}"')
+       connect.commit()
+
+       text = f'''
+ 💰 Вы положили в семейный мешок <code>{summ2}</code> семейный монет
+       '''
+
+       await message.reply(text, parse_mode='html')
+
+
+
+
+
+
+
+
+
+     if message.text.startswith('+название семьи'):
+       user_id = message.from_user.id
+       user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_name = str(user_name[0])
+
+       all_family = cursor.execute(f'SELECT owner_id from family').fetchall()
+       all_family2 = []
+       proverka_family = 0
+
+       for all_owner_id in all_family:
+          all_family2.append(all_owner_id[0])
+
+       user_id_family = cursor.execute(f'SELECT user_id from user_family where user_id = {user_id}').fetchone()
+
+       if user_id_family != None:
+          rank_family = cursor.execute(f'SELECT rank from user_family where user_id = {user_id}').fetchone()
+          rank_family = int(rank_family[0])  
+
+          name_family5 = cursor.execute(f'SELECT family from user_family where user_id = {user_id}').fetchone()
+          name_family5 = name_family5[0]     
+       else:
+          proverka_family += 1
+
+       if user_id in all_family2:
+          rank_family = 3
+         
+          name_family5 = cursor.execute(f'SELECT name from family where owner_id = {user_id}').fetchone()
+          name_family5 = name_family5[0]     
+       else:
+          proverka_family += 1
+
+       if proverka_family == 2:
+          return await message.reply(f'❗️ Вы <b>не состоите</b> в семье  | Для просмотра команд перейдите в <code>Помощь»Организации»семьи</code>', parse_mode='html')
+       else:
+          pass
+
+       if rank_family < 3:
+          return await message.reply(f'❗️ Менять название семьи можно только с <b>3 ранга</b>', parse_mode='html')
+       else:
+          pass
+
+       user_status = cursor.execute("SELECT user_status from users where user_id = ?",(message.from_user.id,)).fetchone()
+       user_status = user_status[0]
+
+       if user_status in ['Helper_Admin', 'Owner']:
+          period = 1
+       else:
+          period = 604800 #7d
+
+       get = cursor.execute(f'SELECT time_name FROM family WHERE name = "{name_family5}"').fetchone()
+       last_stavka = f"{int(get[0])}"
+       stavkatime = time.time() - float(last_stavka)
+
+       if stavkatime < period:
+          times2 = time.localtime(float(get[0]))
+          print(times2)
+
+          if times2.tm_mday <= 9:
+             tm_mday2 = 0
+          else:
+             tm_mday2 = ''
+         
+          if times2.tm_mon <= 9:
+             tm_mon2 = 0
+         else:
+             tm_mon2 = ''
+
+          if times2.tm_hour <= 9:
+             tm_hour2 = 0
+          else:
+             tm_hour2 = ''
+
+          if times2.tm_min <= 9:
+             tm_min2 = 0
+          else:
+             tm_min2 = ''
+
+          full_times2 = f'{tm_mday2}{times2.tm_mday}.{tm_mon2}{times2.tm_mon}.{times2.tm_year} в {tm_hour2}{times2.tm_hour}:{tm_min2}{times2.tm_min}'
+
+          return await message.reply(f'❗️ Менять название семьи, можно раз в <b>7 дней</b> | Последнее изменение название было <code>{full_times2}</code>', parse_mode='html')
+       else:
+          pass
+
+       name_family = message.text.split()[2:]
+       name_family2 = ' '.join(name_family)
+       full_name_family = (name_family2).replace(' ','').replace('🇷🇺', '').replace('Россия', 'россия').replace('россия', '')
+
+       if len(full_name_family) < 4:
+          return await message.reply('❗️ Название семьи должна быть больше <b>4 символов</b>', parse_Mode='html')
+       elif len(full_name_family) > 35:
+          return await message.reply(f'❗️ Название семьи должна быть меньше <b>35 символов</b>', parse_mode='html')
+       else:
+          pass
+
+       all_family_name = cursor.execute('SELECT name from family').fetchall()
+       all_family_name2 = []
+
+       for all_family_name3 in all_family_name:
+          all_family_name2.append(all_family_name3[0])
+   
+       if full_name_family in all_family_name2:
+          return await message.reply(f'❗️ Семья с названием «<b>{full_name_family}</b>» уже существует', parse_mode='html')
+       else:
+          pass
+
+       cursor.execute(f'UPDATE family SET name = "{full_name_family}" where name = "{name_family5}"')
+
+       sqlite_select_query27 = f"""SELECT * from user_family where family = \"{name_family5}\""""
+       cursor.execute(sqlite_select_query27)
+       full_user_id_family_update = cursor.fetchall()
+
+       for update_name_family_user_id in full_user_id_family_update:
+          print(update_name_family_user_id[1])
+          cursor.execute(f'UPDATE user_family SET family = "{full_name_family}" where user_id = "{update_name_family_user_id[1]}"')
+       connect.commit()
+
+       text = f'''
+ ✅ Вы успешно изменили название семьи с <b>{name_family5}</b> на <b>{full_name_family}</b>
+       '''
+
+       await message.reply(text, parse_mode='html')
+
+
+
+
+     if message.text.lower() == 'информация о семьях':
+        user_id = message.from_user.id
+        user_name = cursor.execute("SELECT user_name from users where user_id = ?",(message.from_user.id,)).fetchone()
+        user_name = str(user_name[0])
+
+        text = f'''
+ <a href='tg://user?id={user_id}'>{user_name}</a>, вот информация за «<b>СЕМЬИ</b>» 👨‍👩‍👧‍👦
+
+ ✏️ <b><code>Создать семью</code> <i>[название]</i> - команда для создание свой семьи <i>(Стоимость: {config.cash_family} Donate-Coins 🪙)</i></b>
+ 👨‍👩‍👧‍👦 <b><code>Моя семья</code> | <code>семья</code> - вывод информации за семью в которой вы состоите </b>
+ ⚙️ <b><code>+название семьи</code> <i>[название]</i> - Меняет название семьи <i>( можно раз в 7d) (от 3 ранга)</i></b>
+ 💎 <b><code>Купить монеты</code> <i>[количество]</i> - Покупка семейный монет в мешок семьи</b>
+ ➖ <b><code>-ранг семьи</code> - Понизить игрока в семье на 1 ранг ниже <i>(от 3 ранга)</i></b>
+ ➕ <b><code>+ранг семьи</code> - Повысить игрока в семье на 1 ранг выше <i>(от 3 ранга)</i></b>
+ 👶 <b><code>Пригласить в семью</code> - Приглашение в вашу семью <i>(от 2 ранга)</i></b>
+ ❌ <b><code>Выгнать из семьи</code> - Исключение игрока из вашей семьи <i>(от 3 ранга)</i></b>
+ 💭 <b><code>+описание семьи</code> <i>[описание]</i> - Устоновка описание в вашей семье <i>(от 3 ранга)</i></b>
+ 😔 <b><code>Распустить семью</code> - Удаление семьи <i>(от 3 ранга)</i></b>
+ 🔙 <b><code>Выйти с семьи</code> - Выход с семьи </b>
+
+ ❗️ Будьте окуратней при <b>выдаче ранга игроку</b>
+        '''
+       
+        await message.reply(text, parse_mode='html')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # TOP FAMILY
+
+        user_id = callback.from_user.id
+        user_name = cursor.execute("SELECT user_name from users where user_id = ?",(callback.from_user.id,)).fetchone()
+        user_name = str(user_name[0])
+
+        list = cursor.execute(f"SELECT * FROM family ORDER BY balance DESC").fetchmany(10)
+        top_list = []
+
+        num = 0
+
+        for user in list:
+
+           num += 1
+
+           if num == 1:
+              num2 = '1️⃣'
+              num3 = ' <b>🎯ТОП 1🎯</b> |'
+           if num == 2:
+              num2 = '2️⃣'
+              num3 = ''
+           if num == 3:
+              num2 = '3️⃣'
+              num3 = ''
+           if num == 4:
+              num2 = '4️⃣'
+              num3 = ''
+           if num == 5:
+              num2 = '5️⃣'
+              num3 = ''
+           if num == 6:
+              num2 = '6️⃣'
+              num3 = ''
+           if num == 7:
+              num2 = '7️⃣'
+              num3 = ''
+           if num == 8:
+              num2 = '8️⃣'
+              num3 = ''
+           if num == 9:
+              num2 = '9️⃣'
+              num3 = ''
+           if num == 10:
+              num2 = '🔟'
+              num3 = ''
+          
+           balance = '{:,}'.format(user[4]).replace(',','.')
+          
+           if user[1] == config.owner_id:
+             pass
+           else:
+             text = f'{num2} {user[0]} |{num3} 🔎 ID: <code>{user[3]}</code> | {balance} с. монет'
+
+           top_list.append(text)  
+
+
+        if top_list == ['']:
+          top_f = '\n    ❗️ <b>На данный момент нету ни одной семьи</b>'
+        else:
+          top_f = '\n'.join(top_list)
+
+        await callback.message.answer( f"<a href='tg://user?id={user_id}'>{user_name}</a>, вот топ 10 семьей в «<b>{config.full_bot_name}</b>»:\n" + top_f, parse_mode='html')
+
+
+
